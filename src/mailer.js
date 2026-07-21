@@ -1,71 +1,86 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const { ImapFlow } = require('imapflow');
 
-/**
- * Employee SMTP creds are stored as env vars shaped:
- *   EMPLOYEE_SMTP_<KEY>=host|port|user|pass
- * This keeps real mailbox passwords out of the database entirely —
- * they only ever live in the server's environment.
- */
-function getEmployeeTransport(smtpKey) {
-  const raw = process.env[`EMPLOYEE_SMTP_${smtpKey.toUpperCase()}`];
-  if (!raw) {
-    throw new Error(
-      `No EMPLOYEE_SMTP_${smtpKey.toUpperCase()} entry found in .env for smtp_key "${smtpKey}"`
-    );
-  }
-  const [host, port, user, pass] = raw.split('|');
-  if (!host || !port || !user || !pass) {
-    throw new Error(
-      `EMPLOYEE_SMTP_${smtpKey.toUpperCase()} is malformed — expected host|port|user|pass`
-    );
-  }
-  return {
-    transport: nodemailer.createTransport({
-      host,
-      port: Number(port),
-      secure: Number(port) === 465,
-      auth: { user, pass },
-    }),
-    fromAddress: user,
-  };
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+function parseCreds(raw) {
+  const parts = raw.split('|');
+  return { user: parts[2], pass: parts[3] };
 }
 
-function getManagerTransport() {
-  const { MANAGER_SMTP_HOST, MANAGER_SMTP_PORT, MANAGER_SMTP_USER, MANAGER_SMTP_PASS } =
-    process.env;
-  if (!MANAGER_SMTP_HOST || !MANAGER_SMTP_PORT || !MANAGER_SMTP_USER || !MANAGER_SMTP_PASS) {
-    throw new Error('Manager SMTP settings are missing from .env');
+function buildRawEmail({ from, fromName, to, subject, text }) {
+  const date = new Date().toUTCString();
+  return (
+    `From: "${fromName}" <${from}>\r\n` +
+    `To: ${to}\r\n` +
+    `Subject: ${subject}\r\n` +
+    `Date: ${date}\r\n` +
+    `Content-Type: text/plain; charset=utf-8\r\n\r\n` +
+    text
+  );
+}
+
+async function appendToSent({ user, pass, rawEmail }) {
+  const client = new ImapFlow({
+    host: process.env.IMAP_HOST,
+    port: Number(process.env.IMAP_PORT || 993),
+    secure: true,
+    auth: { user, pass },
+    logger: false,
+  });
+  await client.connect();
+  try {
+    await client.append(process.env.IMAP_SENT_FOLDER || 'Sent', rawEmail, ['\\Seen']);
+  } finally {
+    await client.logout();
   }
-  return {
-    transport: nodemailer.createTransport({
-      host: MANAGER_SMTP_HOST,
-      port: Number(MANAGER_SMTP_PORT),
-      secure: Number(MANAGER_SMTP_PORT) === 465,
-      auth: { user: MANAGER_SMTP_USER, pass: MANAGER_SMTP_PASS },
-    }),
-    fromAddress: MANAGER_SMTP_USER,
-  };
 }
 
 async function sendAsManager({ to, subject, text, html }) {
-  const { transport, fromAddress } = getManagerTransport();
-  return transport.sendMail({
-    from: `"${process.env.MANAGER_NAME || 'Manager'}" <${fromAddress}>`,
+  const fromAddress = process.env.MANAGER_EMAIL;
+  const fromName = process.env.MANAGER_NAME || 'Manager';
+
+  await resend.emails.send({
+    from: `${fromName} <${fromAddress}>`,
     to,
     subject,
     text,
     html,
   });
+
+  try {
+    const raw = buildRawEmail({ from: fromAddress, fromName, to, subject, text });
+    await appendToSent({
+      user: process.env.MANAGER_SMTP_USER,
+      pass: process.env.MANAGER_SMTP_PASS,
+      rawEmail: raw,
+    });
+  } catch (err) {
+    console.error('[mailer] Sent, but failed to file copy in manager Sent folder:', err.message);
+  }
 }
 
 async function sendAsEmployee({ smtpKey, fromName, to, subject, text }) {
-  const { transport, fromAddress } = getEmployeeTransport(smtpKey);
-  return transport.sendMail({
-    from: `"${fromName}" <${fromAddress}>`,
+  const raw = process.env[`EMPLOYEE_SMTP_${smtpKey.toUpperCase()}`];
+  if (!raw) {
+    throw new Error(`No EMPLOYEE_SMTP_${smtpKey.toUpperCase()} entry found in .env`);
+  }
+  const { user, pass } = parseCreds(raw);
+  const fromAddress = user;
+
+  await resend.emails.send({
+    from: `${fromName} <${fromAddress}>`,
     to,
     subject,
     text,
   });
+
+  try {
+    const rawEmail = buildRawEmail({ from: fromAddress, fromName, to, subject, text });
+    await appendToSent({ user, pass, rawEmail });
+  } catch (err) {
+    console.error(`[mailer] Sent, but failed to file copy in ${fromName}'s Sent folder:`, err.message);
+  }
 }
 
 module.exports = { sendAsManager, sendAsEmployee };
