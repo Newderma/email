@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Task Status Check-in — Newderma1</title>
+<title>تحديث حالة المهام — نيوديرما١</title>
 <style>
   :root {
     --green: #6abf4b;
@@ -19,7 +19,7 @@
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Calibri, Arial, sans-serif;
+    font-family: Calibri, Tahoma, Arial, sans-serif;
     background: var(--bg);
     color: var(--navy);
   }
@@ -54,6 +54,7 @@
     cursor: pointer;
     color: var(--slate);
     transition: all 0.15s ease;
+    font-family: inherit;
   }
   .status-btn.selected[data-status="done"] { background: #22c55e; border-color: #22c55e; color: white; }
   .status-btn.selected[data-status="in_progress"] { background: var(--amber); border-color: var(--amber); color: white; }
@@ -82,6 +83,7 @@
     font-weight: 700;
     cursor: pointer;
     margin-top: 8px;
+    font-family: inherit;
   }
   .submit-btn:disabled { background: var(--slate-light); cursor: not-allowed; }
   .submit-btn:not(:disabled):active { background: var(--green-dark); }
@@ -98,18 +100,18 @@
 </head>
 <body>
   <div class="header">
-    <h1>Newderma1 — Task Check-in</h1>
-    <p id="subheader">Loading…</p>
+    <h1>نيوديرما١ — تحديث حالة المهام</h1>
+    <p id="subheader">جاري التحميل…</p>
   </div>
   <div class="wrap">
-    <div id="loadingState" class="state-message">Loading your tasks…</div>
+    <div id="loadingState" class="state-message">جاري تحميل المهام…</div>
     <div id="errorState" class="state-message error hidden"></div>
-    <div id="successState" class="state-message success hidden">Sent — thanks for the update.</div>
+    <div id="successState" class="state-message success hidden">تم الإرسال — شكراً على التحديث.</div>
 
     <div id="formArea" class="hidden">
       <p class="greeting" id="greeting"></p>
       <div id="taskList"></div>
-      <button id="submitBtn" class="submit-btn" disabled>Send update</button>
+      <button id="submitBtn" class="submit-btn" disabled>إرسال التحديث</button>
     </div>
   </div>
 
@@ -147,11 +149,11 @@
       card.innerHTML = `
         <div class="task-text">${escapeHtml(task.task_text)}</div>
         <div class="status-row">
-          <button type="button" class="status-btn" data-status="done">Done</button>
-          <button type="button" class="status-btn" data-status="in_progress">In progress</button>
-          <button type="button" class="status-btn" data-status="not_yet">Not yet</button>
+          <button type="button" class="status-btn" data-status="done">تم</button>
+          <button type="button" class="status-btn" data-status="in_progress">قيد التنفيذ</button>
+          <button type="button" class="status-btn" data-status="not_yet">لم يتم بعد</button>
         </div>
-        <textarea class="note-field" placeholder="Optional note…"></textarea>
+        <textarea class="note-field" placeholder="ملاحظة (اختياري)…"></textarea>
       `;
       const buttons = card.querySelectorAll('.status-btn');
       const noteField = card.querySelector('.note-field');
@@ -180,29 +182,29 @@
 
   async function load() {
     if (!token) {
-      showError('This link is missing information. Please use the link from your email.');
+      showError('هذا الرابط ناقص. الرجاء استخدام الرابط الموجود في البريد الإلكتروني.');
       return;
     }
     try {
       const res = await fetch(`/api/approval/${token}`);
       const data = await res.json();
       if (!res.ok) {
-        showError(data.error || 'Something went wrong loading this link.');
+        showError(data.error || 'حدث خطأ أثناء تحميل هذا الرابط.');
         return;
       }
-      subheader.textContent = `Hi ${data.employeeName}`;
-      greeting.textContent = 'Tap a status for each item below, then send.';
+      subheader.textContent = `مرحباً ${data.employeeName}`;
+      greeting.textContent = 'اختر حالة كل مهمة أدناه، ثم أرسل.';
       renderTasks(data.tasks);
       loadingState.classList.add('hidden');
       formArea.classList.remove('hidden');
     } catch (e) {
-      showError('Could not reach the server. Check your connection and try again.');
+      showError('تعذر الوصول إلى الخادم. تحقق من الاتصال وحاول مرة أخرى.');
     }
   }
 
   submitBtn.addEventListener('click', async () => {
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Sending…';
+    submitBtn.textContent = 'جاري الإرسال…';
     const payload = {
       answers: Object.entries(answers).map(([task_id, v]) => ({
         task_id,
@@ -218,7 +220,7 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        showError(data.error || 'Could not send. Please try again.');
+        showError(data.error || 'تعذر الإرسال. حاول مرة أخرى.');
         formArea.classList.add('hidden');
         return;
       }
@@ -226,8 +228,8 @@
       successState.classList.remove('hidden');
     } catch (e) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Send update';
-      showError('Could not reach the server. Please try again.');
+      submitBtn.textContent = 'إرسال التحديث';
+      showError('تعذر الوصول إلى الخادم. حاول مرة أخرى.');
     }
   });
 

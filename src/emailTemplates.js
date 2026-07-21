@@ -1,50 +1,41 @@
-/**
- * Turns a list of open task rows into the manager's check-in email.
- * Deliberately plain language — the task_text the user wrote is trusted
- * as-is, no attempt to parse or restructure it.
- */
 function buildCheckInEmail({ employeeName, tasks, approvalLink }) {
   const list = tasks.map((t) => `- ${t.task_text}`).join('\n');
   const text =
-    `Hi ${employeeName},\n\n` +
-    `Quick check-in on a few open items:\n\n${list}\n\n` +
-    `Please give a quick status update here (takes under a minute):\n${approvalLink}\n\n` +
-    `Thanks,\n${process.env.MANAGER_NAME || 'Manager'}`;
+    `مرحباً ${employeeName}،\n\n` +
+    `تحديث سريع على بعض المهام المفتوحة:\n\n${list}\n\n` +
+    `الرجاء تقديم تحديث سريع للحالة من هنا (يستغرق أقل من دقيقة):\n${approvalLink}\n\n` +
+    `شكراً،\n${process.env.MANAGER_NAME || 'الإدارة'}`;
 
   const html =
-    `<p>Hi ${escapeHtml(employeeName)},</p>` +
-    `<p>Quick check-in on a few open items:</p>` +
+    `<div dir="rtl" style="text-align:right;font-family:Calibri,Arial,sans-serif;">` +
+    `<p>مرحباً ${escapeHtml(employeeName)}،</p>` +
+    `<p>تحديث سريع على بعض المهام المفتوحة:</p>` +
     `<ul>${tasks.map((t) => `<li>${escapeHtml(t.task_text)}</li>`).join('')}</ul>` +
-    `<p><a href="${approvalLink}">Click here to give a quick status update</a> (takes under a minute).</p>` +
-    `<p>Thanks,<br/>${escapeHtml(process.env.MANAGER_NAME || 'Manager')}</p>`;
+    `<p><a href="${approvalLink}">اضغط هنا لتقديم تحديث سريع للحالة</a> (يستغرق أقل من دقيقة).</p>` +
+    `<p>شكراً،<br/>${escapeHtml(process.env.MANAGER_NAME || 'الإدارة')}</p>` +
+    `</div>`;
 
   return {
-    subject: `Quick status check — ${tasks.length} open item${tasks.length > 1 ? 's' : ''}`,
+    subject: `تحديث سريع — ${tasks.length} ${tasks.length > 1 ? 'مهام مفتوحة' : 'مهمة مفتوحة'}`,
     text,
     html,
   };
 }
 
-/**
- * Composes the employee's reply email FROM HER ACTUAL SUBMITTED ANSWERS.
- * Nothing here is guessed — statuses/notes come directly from what she
- * tapped/typed on the approval page.
- */
 function buildReplyEmail({ employeeName, managerName, answers }) {
-  // answers: [{ task_text, status: 'done'|'in_progress'|'not_yet', note }]
-  const statusLabel = { done: 'Done', in_progress: 'In progress', not_yet: 'Not yet' };
+  const statusLabel = { done: 'تم الإنجاز', in_progress: 'قيد التنفيذ', not_yet: 'لم يتم بعد' };
   const lines = answers.map((a) => {
     const base = `- ${a.task_text}: ${statusLabel[a.status] || a.status}`;
     return a.note ? `${base} (${a.note})` : base;
   });
 
   const text =
-    `Hi ${managerName},\n\n` +
-    `Here's my update:\n\n${lines.join('\n')}\n\n` +
-    `Best,\n${employeeName}`;
+    `مرحباً ${managerName}،\n\n` +
+    `إليك تحديثي:\n\n${lines.join('\n')}\n\n` +
+    `مع تحياتي،\n${employeeName}`;
 
   return {
-    subject: `Re: Quick status check`,
+    subject: `رد: تحديث سريع للحالة`,
     text,
   };
 }
