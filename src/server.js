@@ -4,7 +4,7 @@ const path = require('path');
 const supabase = require('./supabase');
 const { sendAsEmployee } = require('./mailer');
 const { buildReplyEmail } = require('./emailTemplates');
-const { startScheduler } = require('./scheduler');
+const { startScheduler, runCheckInCycle } = require('./scheduler');
 
 const app = express();
 app.use(express.json());
@@ -124,6 +124,13 @@ app.post('/api/approval/:token/submit', async (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/trigger-checkin', async (req, res) => {
+  if (req.query.secret !== process.env.TRIGGER_SECRET) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  await runCheckInCycle();
+  res.json({ ok: true, message: 'Check-in cycle ran.' });
+});
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 const PORT = process.env.PORT || 3000;
