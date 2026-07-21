@@ -131,6 +131,28 @@ app.get('/api/trigger-checkin', async (req, res) => {
   await runCheckInCycle();
   res.json({ ok: true, message: 'Check-in cycle ran.' });
 });
+
+app.get('/api/test-imap', (req, res) => {
+     if (req.query.secret !== process.env.TRIGGER_SECRET) {
+       return res.status(403).json({ error: 'Forbidden' });
+     }
+     const tls = require('tls');
+     const socket = tls.connect(
+       { host: process.env.IMAP_TEST_HOST, port: 993, timeout: 8000 },
+       () => {
+         res.json({ ok: true, message: 'Connected to IMAP server successfully.' });
+         socket.end();
+       }
+     );
+     socket.on('error', (err) => {
+       res.status(502).json({ ok: false, error: err.message });
+     });
+     socket.on('timeout', () => {
+       res.status(504).json({ ok: false, error: 'Connection timed out' });
+       socket.destroy();
+     });
+   });
+
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 const PORT = process.env.PORT || 3000;
