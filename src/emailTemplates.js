@@ -3,18 +3,19 @@ function buildCheckInEmail({ employeeName, tasks, approvalLink }) {
   const managerName = process.env.MANAGER_NAME || 'الإدارة';
 
   const text =
-    `مرحباً ${employeeName}،\n\n` +
+    `مساء الخير ${employeeName}،\n\n` +
     `تحديث سريع على بعض المهام المفتوحة:\n\n${list}\n\n` +
     `الرجاء تحديث حالتك على هذه المهام من هنا:\n${approvalLink}\n\n` +
-    `شكراً،\n${managerName}`;
+    `تحياتي،\n\n${managerName}`;
 
   const html =
     `<div dir="rtl" style="text-align:right;font-family:Calibri,Arial,sans-serif;color:#1e293b;">` +
-    `<p>مرحباً ${escapeHtml(employeeName)}،</p>` +
+    `<p>مساء الخير ${escapeHtml(employeeName)}،</p>` +
     `<p>تحديث سريع على بعض المهام المفتوحة:</p>` +
     `<ul>${tasks.map((t) => `<li>${escapeHtml(t.task_text)}</li>`).join('')}</ul>` +
     `<p>الرجاء <a href="${approvalLink}" style="color:inherit;text-decoration:none;font-weight:600;">تحديث حالتك</a> على هذه المهام.</p>` +
-    `<p>شكراً،<br/>${escapeHtml(managerName)}</p>` +
+    `<p style="margin-top:20px;margin-bottom:2px;">تحياتي،</p>` +
+    `<p style="margin-top:0;">${escapeHtml(managerName)}</p>` +
     `</div>`;
 
   return {
