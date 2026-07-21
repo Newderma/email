@@ -1,0 +1,18 @@
+{
+  "name": "hr-followup-service",
+  "version": "1.0.0",
+  "description": "Automated staff task follow-up emails with per-employee approval before sending",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "check-now": "node src/scheduler.js --run-once"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.14"
+  }
+}
